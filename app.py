@@ -1,13 +1,15 @@
+import os
 from flask import Flask, render_template, send_file, request
 from pymongo import MongoClient
 from gridfs import GridFS
 from bson import ObjectId
 
-app = Flask(__name__, template_folder='/Templates')
+app = Flask(__name__, template_folder='Templates') 
 
 # Connect to MongoDB Atlas
-client = MongoClient('MONGO_URI')
-db = client['video_db']  # Use your MongoDB Atlas database name
+mongo_uri = os.getenv('MONGO_URI')  # Get Mongo URI from environment variable
+client = MongoClient(mongo_uri)
+db = client['video_db'] 
 fs = GridFS(db)
 
 @app.route('/')
@@ -17,7 +19,7 @@ def index():
 
     # Fetch videos for the current page
     videos = []
-    total_videos = db.fs.files.count_documents({})  # Correctly count the total number of videos
+    total_videos = db.fs.files.count_documents({})  
     cursor = fs.find().skip((page - 1) * per_page).limit(per_page)
     for file in cursor:
         videos.append({
@@ -38,7 +40,6 @@ def video(video_id):
 
 @app.route('/download/<video_id>')
 def download(video_id):
-    # Download the video file from GridFS
     video_file = fs.get(ObjectId(video_id))
     return send_file(video_file, mimetype='video/mp4', as_attachment=True, download_name=video_file.filename)
 
